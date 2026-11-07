@@ -1,12 +1,9 @@
+mod editor;
 mod store;
 mod tui;
 
 use clap::{Parser, Subcommand};
-use std::{
-    env, fs,
-    io::{self, IsTerminal, Read, Write},
-    process::Command,
-};
+use std::io::{self, IsTerminal, Read, Write};
 use store::{fmt_time, parse_tags, Store};
 
 #[derive(Parser)]
@@ -19,7 +16,7 @@ NOTE can be an id (`3`), an exact title, or a unique piece of a title.
 
 Examples:
   notes                              open the interactive view
-  notes add Groceries -t home        new note, body written in $EDITOR
+  notes add Groceries -t home        new note, body written in the editor
   notes add Idea -b \"ship it\"        new note with an inline body
   echo \"draft\" | notes add Piped     body from stdin
   notes ls -s milk                   search titles, bodies and tags
@@ -35,7 +32,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// Create a note; opens $EDITOR for the body unless -b or stdin is given
+    /// Create a note; opens the editor for the body unless -b or stdin is given
     #[command(visible_alias = "a")]
     Add {
         /// Note title (several words are fine, no quotes needed)
@@ -61,7 +58,7 @@ enum Cmd {
     /// Print a note
     #[command(visible_alias = "s")]
     Show { note: String },
-    /// Edit a note's body in $EDITOR
+    /// Edit a note's body in the built-in editor
     #[command(visible_alias = "e")]
     Edit { note: String },
     /// Change a note's title
@@ -94,19 +91,6 @@ enum Cmd {
     Path,
 }
 
-/// Open `initial` in $VISUAL / $EDITOR / vi and return what was saved.
-pub fn edit_text(initial: &str) -> io::Result<String> {
-    let ed = env::var("VISUAL").or_else(|_| env::var("EDITOR")).unwrap_or_else(|_| "vi".into());
-    let mut f = tempfile::Builder::new().prefix("note-").suffix(".md").tempfile()?;
-    f.write_all(initial.as_bytes())?;
-    // via sh so EDITOR="code -w" works; the path arrives as $0
-    let status = Command::new("sh").arg("-c").arg(format!("{ed} \"$0\"")).arg(f.path()).status()?;
-    if !status.success() {
-        return Err(io::Error::other(format!("editor “{ed}” exited with an error, nothing saved")));
-    }
-    Ok(fs::read_to_string(f.path())?.trim_end().to_string())
-}
-
 fn paint(on: bool, code: &str, s: &str) -> String {
     if on { format!("\x1b[{code}m{s}\x1b[0m") } else { s.to_string() }
 }
@@ -133,7 +117,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     io::stdin().read_to_string(&mut b)?;
                     b.trim_end().to_string()
                 }
-                None => edit_text("")?,
+                None => match editor::edit_cli(&title.join(" "), "")? {
+                    Some(b) => b,
+                    None => return Ok(println!("Cancelled, no note added")),
+                },
             };
             let id = s.add(title.join(" "), body, parse_tags(&tag.join(",")));
             s.save()?;
@@ -169,13 +156,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         Cmd::Edit { note } => {
             let id = s.resolve(&note)?;
             let old = s.get(id).unwrap().body.clone();
-            let new = edit_text(&old)?;
-            if new == old {
-                println!("No changes");
-            } else {
-                s.update(id, |n| n.body = new);
-                s.save()?;
-                println!("Saved note {id}");
+            let title = s.get(id).unwrap().title.clone();
+            match editor::edit_cli(&title, &old)? {
+                Some(new) if new != old => {
+                    s.update(id, |n| n.body = new);
+                    s.save()?;
+                    println!("Saved note {id}");
+                }
+                _ => println!("No changes"),
             }
         }
         Cmd::Rename { note, title } => {

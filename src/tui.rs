@@ -1,5 +1,5 @@
 use crate::store::{fmt_time, parse_tags, Note, Store};
-use crate::edit_text;
+use crate::editor;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     layout::{Constraint::{Length, Min, Percentage}, Flex, Layout},
@@ -10,11 +10,11 @@ use ratatui::{
 };
 use std::{env, io};
 
-const ACCENT: Color = Color::Rgb(217, 119, 87);
-const DIM: Color = Color::Rgb(128, 128, 128);
-const TAG: Color = Color::Rgb(122, 162, 247);
-const BAD: Color = Color::Rgb(224, 108, 117);
-const OK: Color = Color::Rgb(152, 195, 121);
+pub const ACCENT: Color = Color::Rgb(217, 119, 87);
+pub const DIM: Color = Color::Rgb(128, 128, 128);
+pub const TAG: Color = Color::Rgb(122, 162, 247);
+pub const BAD: Color = Color::Rgb(224, 108, 117);
+pub const OK: Color = Color::Rgb(152, 195, 121);
 
 #[derive(PartialEq, Clone, Copy)]
 enum Mode {
@@ -53,6 +53,16 @@ pub fn run(store: Store) -> io::Result<()> {
     let res = app.run(&mut term);
     ratatui::restore();
     res
+}
+
+/// A row of `key description` pairs for the bottom bar.
+pub fn hints(h: &[(&str, &str)]) -> Line<'static> {
+    let mut spans = vec![Span::raw(" ")];
+    for (k, d) in h {
+        spans.push(Span::styled(k.to_string(), Style::new().fg(ACCENT)));
+        spans.push(Span::styled(format!(" {d}  "), Style::new().fg(DIM)));
+    }
+    Line::from(spans)
 }
 
 impl App {
@@ -114,12 +124,9 @@ impl App {
 
     fn edit_body(&mut self, term: &mut DefaultTerminal) {
         let Some(n) = self.cur_note() else { return };
-        let (id, body) = (n.id, n.body.clone());
-        ratatui::restore();
-        let res = edit_text(&body);
-        *term = ratatui::init();
-        match res {
-            Ok(new) if new != body => self.change(id, "Saved", |n| n.body = new),
+        let (id, title, body) = (n.id, n.title.clone(), n.body.clone());
+        match editor::edit_tui(term, &title, &body) {
+            Ok(Some(new)) if new != body => self.change(id, "Saved", |n| n.body = new),
             Ok(_) => {}
             Err(e) => self.status = format!("✗ {e}"),
         }
@@ -384,23 +391,18 @@ impl App {
             let c = if self.status.starts_with('✗') { BAD } else { OK };
             return Line::styled(format!(" {}", self.status), Style::new().fg(c));
         }
-        let hints = match self.mode {
+        let hints_for = match self.mode {
             Mode::Normal => &[("↑↓", "move"), ("n", "new"), ("e", "edit"), ("r", "rename"), ("t", "tags"), ("p", "pin"), ("d", "delete"), ("/", "search"), ("?", "help"), ("q", "quit")][..],
             Mode::Help => &[("any key", "close")][..],
             _ => &[("enter", "confirm"), ("esc", "cancel")][..],
         };
-        let mut spans = vec![Span::raw(" ")];
-        for (k, d) in hints {
-            spans.push(Span::styled(*k, Style::new().fg(ACCENT)));
-            spans.push(Span::styled(format!(" {d}  "), Style::new().fg(DIM)));
-        }
-        Line::from(spans)
+        hints(hints_for)
     }
 
     fn draw_help(&self, f: &mut Frame) {
         let rows = [
             ("↑ ↓ / j k", "move"), ("g / G", "first / last"), ("PgUp PgDn", "scroll preview"),
-            ("n", "new note"), ("e / enter", "edit body in $EDITOR"), ("r", "rename title"),
+            ("n", "new note"), ("e / enter", "edit the note body"), ("r", "rename title"),
             ("t", "edit tags"), ("p", "pin / unpin"), ("d", "delete (asks first)"),
             ("/", "search titles, text, tags"), ("esc", "clear search"), ("q / ctrl-c", "quit"),
         ];

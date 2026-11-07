@@ -22,7 +22,7 @@
 macOS or Linux. No Rust knowledge needed; the installer sets up everything it needs.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/siddharthvkutty/cli-notes/main/release/install.sh | bash
+curl -fsSL https://github.com/siddharthvkutty/cli-notes/releases/latest/download/install.sh | bash
 ```
 
 Open a new terminal and run `notes`. To uninstall, run the same command again.
@@ -34,7 +34,7 @@ Type `notes` to open the app. Press `?` inside for every key.
 Or stay in the shell:
 
 ```sh
-notes add Groceries -t home        # body opens in your $EDITOR
+notes add Groceries -t home        # body opens in the built-in editor
 notes ls                           # list notes
 notes show groc                    # print one (id, title, or part of a title)
 notes rename groc "Shopping list"
@@ -47,7 +47,7 @@ Run `notes -h` for all commands.
 
 ## Features
 
-- Editable titles and bodies (bodies open in your own editor)
+- Editable titles and bodies, with a built-in editor (or bring your own via `NOTES_EDITOR`)
 - Tags, pinning, and live search across titles, text and tags
 - Plain JSON storage, saved safely and instantly
 - Asks before it deletes anything
