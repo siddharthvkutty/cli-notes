@@ -4,11 +4,15 @@ A terminal notebook written in Rust. Run `notes` for a full-screen interactive v
 
 ## Install
 
-No Rust knowledge needed. Paste this into a terminal (macOS or Linux):
+No Rust knowledge needed. On macOS or Linux, download the installer from the [latest release](https://github.com/siddharthvkutty/cli-notes/releases/latest), make it executable, and run it:
 
 ```sh
-curl -fsSL https://github.com/siddharthvkutty/cli-notes/releases/latest/download/install.sh | bash
+curl -fsSL -o install.sh https://github.com/siddharthvkutty/cli-notes/releases/latest/download/install.sh
+chmod +x install.sh      # required: downloaded files aren't executable by default
+./install.sh
 ```
+
+(`curl -fsSL <that url> | bash` also works and skips the `chmod`, but downloading first lets you read the script before running it.)
 
 The installer:
 
@@ -17,7 +21,7 @@ The installer:
 3. Links the binary into `~/.cli-notes/bin` and adds that folder to your PATH in `~/.zshrc`, `~/.bashrc` (`~/.bash_profile` on macOS) or fish's `config.fish`, depending on your shell.
 4. Tells you to open a new terminal, then `notes` just works.
 
-**Uninstall:** run the same installer again. When it finds `~/.cli-notes` it asks whether to uninstall, removes the folder and the PATH line, then separately asks whether to delete your saved notes (default: keep them).
+**Uninstall:** run `./install.sh` again. When it finds `~/.cli-notes` it asks whether to uninstall, removes the folder and the PATH line, then separately asks whether to delete your saved notes (default: keep them).
 
 Overrides: `NOTES_REPO` (git URL to clone, for a fork or a different repo address) and `NOTES_HOME` (install folder).
 
@@ -150,6 +154,7 @@ Back up or sync by copying that one file.
 | `src/editor.rs` | Built-in text editor (and the optional external-editor hook) |
 | `src/store.rs` | `Note` / `Store`, JSON load/save, search and sort, lookup by id or title, unit test |
 | `src/tui.rs` | The interactive view (ratatui) |
+| `docs/*.png` | Screenshots used in the README |
 | `release/install.sh` | Installer / uninstaller (git-ignored, published as a release asset, see Install) |
 
 Run the test with `cargo test`.

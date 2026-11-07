@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint::{Length, Min, Percentage}, Flex, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, BorderType, Clear, List, ListItem, ListState, Paragraph, Wrap},
+    widgets::{Block, BorderType, Clear, List, ListItem, ListState, Padding, Paragraph, Wrap},
     DefaultTerminal, Frame,
 };
 use std::{env, io};
@@ -357,7 +357,7 @@ impl App {
     }
 
     fn draw_preview(&self, f: &mut Frame, area: ratatui::layout::Rect) {
-        let block = self.frame(" Preview ".into(), DIM);
+        let block = self.frame(" Preview ".into(), DIM).padding(Padding::horizontal(1));
         let Some(n) = self.cur_note() else { return f.render_widget(block, area) };
         let dim = Style::new().fg(DIM);
         let mut lines = vec![
